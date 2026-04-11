@@ -421,7 +421,7 @@ def render_severe_pollution_analysis(df: pd.DataFrame) -> pd.DataFrame:
 
     if severe_means.empty:
         st.info("No Severe AQI rows are available for the selected filters.")
-        st.plotly_chart(build_severe_contributors_bar(severe_means), use_container_width=True)
+        st.plotly_chart(build_severe_contributors_bar(severe_means), width="stretch")
     else:
         top_row = severe_means.iloc[0]
         st.metric(
@@ -430,13 +430,13 @@ def render_severe_pollution_analysis(df: pd.DataFrame) -> pd.DataFrame:
             f"Mean value: {top_row['Mean Value']:.2f}",
         )
         st.caption(f"Severe AQI rows in current filters: {severe_rows}")
-        st.plotly_chart(build_severe_contributors_bar(severe_means), use_container_width=True)
+        st.plotly_chart(build_severe_contributors_bar(severe_means), width="stretch")
 
     if st.checkbox(
         "Show pollutant distribution across AQI buckets",
         key="correlation_show_bucket_boxplot",
     ):
-        st.plotly_chart(build_bucket_distribution_boxplot(df), use_container_width=True)
+        st.plotly_chart(build_bucket_distribution_boxplot(df), width="stretch")
 
     return severe_means
 
@@ -519,12 +519,12 @@ def render() -> None:
 
     heatmap_col, scatter_col = st.columns(2)
     with heatmap_col:
-        st.plotly_chart(build_correlation_heatmap(correlation), use_container_width=True)
+        st.plotly_chart(build_correlation_heatmap(correlation), width="stretch")
 
     with scatter_col:
         st.plotly_chart(
             build_aqi_scatter(analysis_df, selected_pollutant),
-            use_container_width=True,
+            width="stretch",
         )
 
     severe_means = render_severe_pollution_analysis(filtered_df)

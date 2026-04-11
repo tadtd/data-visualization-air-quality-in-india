@@ -131,7 +131,8 @@ def correlation_heatmap(df: pd.DataFrame, cols: list[str]) -> go.Figure:
 
 
 def show_chart(fig: go.Figure, *, use_container_width: bool = True) -> None:
-    st.plotly_chart(fig, use_container_width=use_container_width)
+    width_mode = "stretch" if use_container_width else "content"
+    st.plotly_chart(fig, width=width_mode)
 
 
 # ---------------------------------------------------------------------------
@@ -411,4 +412,169 @@ def aqi_breach_bar(df: pd.DataFrame, *, threshold: int = 200) -> go.Figure:
         height=360,
     )
     fig.update_xaxes(dtick=1)
+    return fig
+
+
+def hotspot_duration_stacked_bar(df: pd.DataFrame, *, threshold: int = 200) -> go.Figure:
+    """Stacked bar of hotspot episode counts by duration band for each city."""
+    if df.empty:
+        return line_placeholder(f"Phân bố độ dài đợt ô nhiễm (AQI >= {threshold})")
+
+    city_order = (
+        df[["City", "avg_duration_days"]]
+        .drop_duplicates()
+        .sort_values("avg_duration_days", ascending=False)["City"]
+        .tolist()
+    )
+    fig = px.bar(
+        df,
+        x="City",
+        y="episodes",
+        color="duration_group",
+        category_orders={
+            "City": city_order,
+            "duration_group": ["Short (<=3d)", "Medium (4-7d)", "Long (>=8d)"],
+        },
+        color_discrete_map={
+            "Short (<=3d)": CHART_COLOR_SEQUENCE[2],
+            "Medium (4-7d)": CHART_COLOR_SEQUENCE[1],
+            "Long (>=8d)": "#D62728",
+        },
+        custom_data=["avg_duration_days", "longest_duration_days", "total_episodes"],
+    )
+    fig.update_traces(
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            "Nhóm đợt: %{fullData.name}<br>"
+            "Số đợt: %{y}<br>"
+            "Thời lượng TB: %{customdata[0]:.1f} ngày<br>"
+            "Đợt dài nhất: %{customdata[1]} ngày<br>"
+            "Tổng số đợt: %{customdata[2]}<extra></extra>"
+        )
+    )
+    fig.update_layout(
+        title=f"Điểm nóng: đợt ô nhiễm ngắn hạn hay kéo dài? (AQI >= {threshold})",
+        xaxis_title="Thành phố điểm nóng",
+        yaxis_title="Số đợt ô nhiễm",
+        height=430,
+        barmode="stack",
+        legend_title_text="Độ dài đợt",
+    )
+    fig.update_xaxes(tickangle=-30)
+    return fig
+
+
+def hotspot_persistence_bar(df: pd.DataFrame) -> go.Figure:
+    """Bar + line combo for longest/average episode durations and long-episode share."""
+    if df.empty:
+        return line_placeholder("Độ kéo dài ô nhiễm tại các điểm nóng")
+
+    sub = df.sort_values("longest_duration_days", ascending=False)
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.add_trace(
+        go.Bar(
+            x=sub["City"],
+            y=sub["longest_duration_days"],
+            name="Đợt dài nhất (ngày)",
+            marker_color=CHART_COLOR_SEQUENCE[0],
+            customdata=sub[["avg_duration_days", "total_episodes"]].values,
+            hovertemplate=(
+                "<b>%{x}</b><br>"
+                "Đợt dài nhất: %{y} ngày<br>"
+                "Thời lượng TB: %{customdata[0]:.1f} ngày<br>"
+                "Tổng số đợt: %{customdata[1]}<extra></extra>"
+            ),
+        ),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=sub["City"],
+            y=sub["long_episode_ratio"] * 100,
+            mode="lines+markers",
+            name="Tỷ lệ đợt dài >=8 ngày (%)",
+            line=dict(color="#D62728", width=2),
+            marker=dict(size=7),
+            hovertemplate="<b>%{x}</b><br>Tỷ lệ đợt dài: %{y:.1f}%<extra></extra>",
+        ),
+        secondary_y=True,
+    )
+    fig.update_layout(
+        title="Mức độ kéo dài của ô nhiễm tại các điểm nóng",
+        xaxis_title="Thành phố điểm nóng",
+        height=430,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig.update_xaxes(tickangle=-30)
+    fig.update_yaxes(title_text="Số ngày", secondary_y=False)
+    fig.update_yaxes(title_text="Tỷ lệ (%)", secondary_y=True)
+    return fig
+
+
+def metro_pollutant_priority_bar(df: pd.DataFrame) -> go.Figure:
+    """Rank pollutants by aggregated policy priority score across metros."""
+    if df.empty:
+        return line_placeholder("Ưu tiên chất ô nhiễm tại các đô thị lớn")
+
+    sub = df.sort_values("priority_score", ascending=False)
+    fig = px.bar(
+        sub,
+        x="pollutant",
+        y="priority_score",
+        color="mean_abs_corr",
+        color_continuous_scale="YlOrRd",
+        custom_data=["mean_abs_corr", "mean_severe_lift", "n_cities"],
+    )
+    fig.update_traces(
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            "Điểm ưu tiên: %{y:.3f}<br>"
+            "|Tương quan AQI| TB: %{customdata[0]:.3f}<br>"
+            "Severe uplift TB: %{customdata[1]:.2f}x<br>"
+            "Số đô thị: %{customdata[2]}<extra></extra>"
+        )
+    )
+    fig.update_layout(
+        title="Xếp hạng chất ô nhiễm cần ưu tiên kiểm soát (đô thị lớn)",
+        xaxis_title="Chất ô nhiễm",
+        yaxis_title="Điểm ưu tiên (0-1)",
+        height=420,
+        coloraxis_colorbar_title="|corr|",
+    )
+    return fig
+
+
+def metro_pollutant_priority_heatmap(df: pd.DataFrame) -> go.Figure:
+    """Heatmap of pollutant priority score across major metros."""
+    if df.empty:
+        return line_placeholder("Heatmap ưu tiên chất ô nhiễm theo đô thị")
+
+    pivot = df.pivot_table(index="City", columns="pollutant", values="priority_score", aggfunc="mean")
+    if pivot.empty:
+        return line_placeholder("Heatmap ưu tiên chất ô nhiễm theo đô thị")
+
+    city_order = df.groupby("City")["priority_score"].mean().sort_values(ascending=False).index.tolist()
+    pollutant_order = (
+        df.groupby("pollutant")["priority_score"]
+        .mean()
+        .sort_values(ascending=False)
+        .index
+        .tolist()
+    )
+    pivot = pivot.reindex(index=city_order, columns=pollutant_order)
+
+    fig = px.imshow(
+        pivot,
+        color_continuous_scale="YlOrRd",
+        zmin=0,
+        zmax=1,
+        aspect="auto",
+        labels={"x": "Chất ô nhiễm", "y": "Đô thị", "color": "Điểm ưu tiên"},
+        text_auto=".2f",
+    )
+    fig.update_layout(
+        title="Heatmap mức ưu tiên kiểm soát theo từng đô thị lớn",
+        height=max(360, 36 * len(pivot.index) + 120),
+    )
+    fig.update_xaxes(tickangle=-30)
     return fig
