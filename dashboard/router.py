@@ -6,7 +6,15 @@ import streamlit as st
 
 from dashboard.config import PAGE_KEYS, PAGE_LABELS
 from dashboard.layout import app_sidebar_title
-from dashboard.pages import correlation, geography, insights, overview, temporal
+from dashboard.pages import (
+    city_ranking,
+    correlation,
+    danger_frequency,
+    geography,
+    insights,
+    overview,
+    temporal,
+)
 
 
 def _page_options() -> list[str]:
@@ -32,6 +40,10 @@ def run() -> None:
 
     if page_key == "overview":
         overview.render()
+    elif page_key == "city_ranking":
+        city_ranking.render()
+    elif page_key == "danger_frequency":
+        danger_frequency.render()
     elif page_key == "temporal":
         temporal.render()
     elif page_key == "geography":

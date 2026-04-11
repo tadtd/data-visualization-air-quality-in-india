@@ -42,6 +42,8 @@ POLLUTANT_COLUMNS: tuple[str, ...] = (
 
 PAGE_KEYS: tuple[str, ...] = (
     "overview",
+    "city_ranking",
+    "danger_frequency",
     "temporal",
     "geography",
     "correlation",
@@ -50,6 +52,8 @@ PAGE_KEYS: tuple[str, ...] = (
 
 PAGE_LABELS: dict[str, str] = {
     "overview": "Overview",
+    "city_ranking": "🏙️ City Pollution Ranking",
+    "danger_frequency": "⚠️ Dangerous Day Frequency",
     "temporal": "Temporal Analysis",
     "geography": "Geographic Comparison",
     "correlation": "Pollutant Correlation",
