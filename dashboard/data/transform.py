@@ -6,7 +6,13 @@ from datetime import date
 
 import pandas as pd
 
-from dashboard.config import DANGEROUS_AQI_BUCKETS
+import calendar
+
+import calendar
+
+import numpy as np
+
+from dashboard.config import DANGEROUS_AQI_BUCKETS, MIN_TREND_MONTHS, TREND_LABELS, TREND_STABLE_THRESHOLD, WINTER_MONTHS
 from dashboard.data.schema import COL_AQI, COL_AQI_BUCKET, COL_CITY, COL_DATE, FilterState
 
 
@@ -98,3 +104,135 @@ def list_cities(df: pd.DataFrame) -> list[str]:
     if df.empty or COL_CITY not in df.columns:
         return []
     return sorted(df[COL_CITY].dropna().astype(str).unique().tolist())
+
+
+def city_trend_slopes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Linear regression slope (AQI/month) per city over time.
+    Cities with fewer than MIN_TREND_MONTHS data points are excluded.
+    Returns: City, slope, r_squared, trend_label, n_months — sorted by slope ascending.
+    """
+    if df.empty or COL_DATE not in df.columns or COL_AQI not in df.columns or COL_CITY not in df.columns:
+        return pd.DataFrame()
+
+    monthly = monthly_aqi_by_city(df)
+    if monthly.empty:
+        return pd.DataFrame()
+
+    # Encode year_month as an integer index for regression
+    monthly["_period"] = pd.to_datetime(monthly["year_month"] + "-01", errors="coerce")
+    monthly = monthly.dropna(subset=["_period"])
+    base = monthly["_period"].min()
+    monthly["_t"] = ((monthly["_period"].dt.year - base.year) * 12
+                     + (monthly["_period"].dt.month - base.month))
+
+    records = []
+    for city, grp in monthly.groupby(COL_CITY):
+        grp = grp.dropna(subset=["aqi_mean"]).sort_values("_t")
+        n = len(grp)
+        if n < MIN_TREND_MONTHS:
+            continue
+        t = grp["_t"].to_numpy(dtype=float)
+        y = grp["aqi_mean"].to_numpy(dtype=float)
+        coeffs = np.polyfit(t, y, 1)
+        slope = float(coeffs[0])
+        # R² from residuals
+        y_pred = np.polyval(coeffs, t)
+        ss_res = float(np.sum((y - y_pred) ** 2))
+        ss_tot = float(np.sum((y - y.mean()) ** 2))
+        r_squared = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+
+        if slope < -TREND_STABLE_THRESHOLD:
+            label = TREND_LABELS["improving"]
+        elif slope > TREND_STABLE_THRESHOLD:
+            label = TREND_LABELS["worsening"]
+        else:
+            label = TREND_LABELS["stable"]
+
+        records.append({
+            COL_CITY: city,
+            "slope": slope,
+            "r_squared": r_squared,
+            "trend_label": label,
+            "n_months": n,
+        })
+
+    if not records:
+        return pd.DataFrame()
+
+    result = pd.DataFrame(records).sort_values("slope").reset_index(drop=True)
+    return result
+
+
+def seasonal_monthly_profile(df: pd.DataFrame) -> pd.DataFrame:
+    """AQI aggregated by calendar month (1–12) across all years — reveals seasonality."""
+    if df.empty or COL_DATE not in df.columns or COL_AQI not in df.columns:
+        return pd.DataFrame()
+    t = df.copy()
+    t[COL_DATE] = pd.to_datetime(t[COL_DATE], errors="coerce")
+    t = t.dropna(subset=[COL_DATE])
+    t["month"] = t[COL_DATE].dt.month
+    g = (
+        t.groupby("month", as_index=False)[COL_AQI]
+        .agg(aqi_mean="mean", aqi_std="std")
+    )
+    g["month_name"] = g["month"].apply(lambda m: calendar.month_abbr[m])
+    g["is_winter"] = g["month"].isin(WINTER_MONTHS)
+    return g.sort_values("month").reset_index(drop=True)
+
+
+def winter_vs_nonwinter(df: pd.DataFrame) -> pd.DataFrame:
+    """Compare mean AQI for winter (Nov–Feb) vs non-winter months."""
+    if df.empty or COL_DATE not in df.columns or COL_AQI not in df.columns:
+        return pd.DataFrame()
+    t = df.copy()
+    t[COL_DATE] = pd.to_datetime(t[COL_DATE], errors="coerce")
+    t = t.dropna(subset=[COL_DATE])
+    t["is_winter"] = t[COL_DATE].dt.month.isin(WINTER_MONTHS)
+    g = (
+        t.groupby("is_winter", as_index=False)[COL_AQI]
+        .agg(aqi_mean="mean", aqi_std="std", n_days="count")
+    )
+    g["season"] = g["is_winter"].map({True: "Winter (Nov–Feb)", False: "Non-Winter"})
+    return g[["season", "aqi_mean", "aqi_std", "n_days"]]
+
+
+def monthly_aqi_by_city(df: pd.DataFrame) -> pd.DataFrame:
+    """Monthly mean AQI per city — for multi-city overlay trend chart."""
+    if df.empty or COL_DATE not in df.columns or COL_AQI not in df.columns or COL_CITY not in df.columns:
+        return pd.DataFrame()
+    t = df.copy()
+    t[COL_DATE] = pd.to_datetime(t[COL_DATE], errors="coerce")
+    t = t.dropna(subset=[COL_DATE, COL_CITY])
+    t["year_month"] = t[COL_DATE].dt.to_period("M").astype(str)
+    g = t.groupby(["year_month", COL_CITY], as_index=False)[COL_AQI].mean()
+    return g.rename(columns={COL_AQI: "aqi_mean"})
+
+
+def yearly_aqi_mean(df: pd.DataFrame) -> pd.DataFrame:
+    """Annual mean, median, and std AQI — for year-over-year trend chart."""
+    if df.empty or COL_DATE not in df.columns or COL_AQI not in df.columns:
+        return pd.DataFrame()
+    t = df.copy()
+    t[COL_DATE] = pd.to_datetime(t[COL_DATE], errors="coerce")
+    t = t.dropna(subset=[COL_DATE])
+    t["year"] = t[COL_DATE].dt.year
+    g = (
+        t.groupby("year", as_index=False)[COL_AQI]
+        .agg(aqi_mean="mean", aqi_median="median", aqi_std="std")
+    )
+    return g
+
+
+def aqi_breach_count_by_year(df: pd.DataFrame, *, threshold: int = 200) -> pd.DataFrame:
+    """Count days per year where AQI exceeds the given threshold."""
+    if df.empty or COL_DATE not in df.columns or COL_AQI not in df.columns:
+        return pd.DataFrame()
+    t = df.copy()
+    t[COL_DATE] = pd.to_datetime(t[COL_DATE], errors="coerce")
+    t = t.dropna(subset=[COL_DATE])
+    t["year"] = t[COL_DATE].dt.year
+    t["_breach"] = pd.to_numeric(t[COL_AQI], errors="coerce") > threshold
+    g = t.groupby("year", as_index=False)["_breach"].sum().rename(columns={"_breach": "breach_days"})
+    g["breach_days"] = g["breach_days"].astype(int)
+    return g

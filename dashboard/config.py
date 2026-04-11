@@ -56,6 +56,20 @@ PAGE_LABELS: dict[str, str] = {
     "insights": "Insights & Recommendations",
 }
 
+# Winter months (Nov–Feb) — high-pollution season in India
+WINTER_MONTHS: frozenset[int] = frozenset({11, 12, 1, 2})
+
+# Trend classification: slope in AQI units/month
+TREND_STABLE_THRESHOLD: float = 0.3  # |slope| below this → "Stable"
+TREND_LABELS: dict[str, str] = {
+    "improving": "Improving",
+    "worsening": "Worsening",
+    "stable": "Stable",
+}
+
+# Minimum months of data required for a city trend slope to be computed
+MIN_TREND_MONTHS: int = 12
+
 # Plotly-friendly qualitative palette (colorblind-friendly-ish)
 CHART_COLOR_SEQUENCE: list[str] = [
     "#0173B2",
