@@ -10,7 +10,13 @@ from dashboard.pages import correlation, geography, insights, overview, temporal
 from dashboard.theme import inject_theme
 
 _TAB_LABELS = [PAGE_LABELS[k] for k in PAGE_KEYS]
-_RENDERERS = [overview.render, temporal.render, geography.render, correlation.render, insights.render]
+_RENDERERS = [
+    overview.render,
+    geography.render,
+    correlation.render,
+    temporal.render,
+    insights.render,
+]
 
 
 

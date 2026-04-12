@@ -53,7 +53,7 @@ WHO_LIMITS: dict[str, float] = {
     "PM10": 45.0,
     "NO2": 25.0,
     "SO2": 40.0,
-    "CO": 4000.0,
+    "CO": 300.0,
     "O3": 100.0,
 }
 
@@ -76,25 +76,21 @@ POLLUTANT_COLUMNS: tuple[str, ...] = (
 )
 
 # ---------------------------------------------------------------------------
-# Page navigation
+# Page navigation (must match dashboard/router.py tab order)
 # ---------------------------------------------------------------------------
 PAGE_KEYS: tuple[str, ...] = (
     "overview",
-    "city_ranking",
-    "danger_frequency",
-    "temporal",
     "geography",
     "correlation",
+    "temporal",
     "insights",
 )
 
 PAGE_LABELS: dict[str, str] = {
     "overview": "Overview",
-    "city_ranking": "🏙️ City Pollution Ranking",
-    "danger_frequency": "⚠️ Dangerous Day Frequency",
-    "temporal": "Temporal Analysis",
     "geography": "Geographic Comparison",
     "correlation": "Pollutant Correlation",
+    "temporal": "Temporal Analysis",
     "insights": "Insights & Recommendations",
 }
 
@@ -114,6 +110,18 @@ MIN_TREND_MONTHS: int = 12
 # ---------------------------------------------------------------------------
 # Chart theming
 # ---------------------------------------------------------------------------
+# City ranking / geography: worst vs best + continuous AQI bars
+CHART_RANK_POLLUTED = "#E74C3C"
+CHART_RANK_CLEAN = "#2ECC71"
+CHART_RANK_CONTINUOUS_SCALE: str = "RdYlGn_r"
+
+# Danger-frequency stacked bars (Poor / Very Poor / Severe)
+CHART_DANGER_BUCKET_COLORS: dict[str, str] = {
+    "Poor": "#F39C12",
+    "Very Poor": "#E74C3C",
+    "Severe": "#8E44AD",
+}
+
 CHART_COLOR_SEQUENCE: list[str] = [
     "#0173B2",
     "#DE8F05",

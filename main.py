@@ -15,6 +15,7 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="expanded",
     )
+    st.title("Air Quality in India Dashboard")
     run()
 
 

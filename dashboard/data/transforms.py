@@ -84,6 +84,17 @@ def count_dangerous_days_by_city(df: pd.DataFrame) -> pd.DataFrame:
     return grouped.sort_values("danger_days", ascending=False)
 
 
+def dangerous_day_counts_by_city_bucket(df: pd.DataFrame) -> pd.DataFrame:
+    """Count dangerous days per city and per AQI bucket (Poor / Very Poor / Severe)."""
+    if df.empty or COL_CITY not in df.columns or COL_AQI_BUCKET not in df.columns:
+        return pd.DataFrame()
+    subset = df[df[COL_AQI_BUCKET].isin(DANGEROUS_AQI_BUCKETS)]
+    if subset.empty:
+        return pd.DataFrame(columns=[COL_CITY, COL_AQI_BUCKET, "days"])
+    counts = subset.groupby([COL_CITY, COL_AQI_BUCKET], as_index=False).size().rename(columns={"size": "days"})
+    return counts
+
+
 def default_date_range_from_df(df: pd.DataFrame) -> tuple[date, date]:
     """Infer min/max date for filter defaults."""
     if df.empty or COL_DATE not in df.columns:

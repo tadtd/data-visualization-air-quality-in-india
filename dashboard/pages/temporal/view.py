@@ -17,7 +17,7 @@ def render() -> None:
     st.sidebar.caption(data_status_message())
     raw = TemporalData.load_frame()
     filters = render_filter_state(raw, key_prefix="te_", show_pollutants=False, show_buckets=True)
-    df = TemporalData.apply_filter_state(raw, filters)
+    df = TemporalData.filter_frame(raw, filters)
 
     # --- Yearly + Monthly side by side ---
     yearly = TemporalData.yearly_aqi_mean(df)

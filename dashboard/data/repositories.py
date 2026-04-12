@@ -31,6 +31,11 @@ class DatasetRepository:
         """Subset a frame using the shared filter model."""
         return apply_filters(df, filters)
 
+    @classmethod
+    def filter_frame(cls, df: pd.DataFrame, filters: FilterState) -> pd.DataFrame:
+        """Alias for :meth:`apply_filter_state` (readable in page views)."""
+        return cls.apply_filter_state(df, filters)
+
 
 def load_dataset_frame(kind: DatasetKind) -> pd.DataFrame:
     """Functional alias for :meth:`DatasetRepository.load_frame`."""

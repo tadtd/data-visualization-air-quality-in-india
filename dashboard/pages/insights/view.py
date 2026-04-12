@@ -17,7 +17,7 @@ def render() -> None:
     st.sidebar.caption(data_status_message())
     raw = InsightsData.load_frame()
     filters = render_filter_state(raw, key_prefix="in_", show_pollutants=True, show_buckets=True)
-    df = InsightsData.apply_filter_state(raw, filters)
+    df = InsightsData.filter_frame(raw, filters)
 
     # --- Hotspot duration ---
     duration_profile = InsightsData.hotspot_duration_profile(df, aqi_threshold=200, top_n=8)

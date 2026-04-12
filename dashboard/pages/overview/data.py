@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from dashboard.data.repositories import DatasetRepository
-from dashboard.data.schema import COL_AQI, COL_AQI_BUCKET, COL_CITY, FilterState
+from dashboard.data.schema import COL_AQI, COL_AQI_BUCKET, COL_CITY
 from dashboard.data.transforms import mean_aqi_by_city, mean_aqi_by_month, summarize_aqi_kpis
 
 
@@ -13,10 +13,6 @@ class OverviewData(DatasetRepository):
     """Data access and summaries for the Overview page."""
 
     dataset_kind = "city_day"
-
-    @staticmethod
-    def filter_frame(df: pd.DataFrame, filters: FilterState) -> pd.DataFrame:
-        return OverviewData.apply_filter_state(df, filters)
 
     @staticmethod
     def summarize_kpis(df: pd.DataFrame) -> dict[str, float | int]:

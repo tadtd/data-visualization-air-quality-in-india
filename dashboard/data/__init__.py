@@ -6,6 +6,7 @@ from dashboard.data.schema import FilterState
 from dashboard.data.transforms import (
     apply_filters,
     count_dangerous_days_by_city,
+    dangerous_day_counts_by_city_bucket,
     default_date_range_from_df,
     list_cities,
     mean_aqi_by_city,
@@ -20,6 +21,7 @@ __all__ = [
     "DatasetRepository",
     "apply_filters",
     "count_dangerous_days_by_city",
+    "dangerous_day_counts_by_city_bucket",
     "data_status_message",
     "default_date_range_from_df",
     "list_cities",

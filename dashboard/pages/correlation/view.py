@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.data.loader import data_status_message
+from dashboard.data.schema import COL_CITY
 from dashboard.pages.correlation.charts import CorrelationCharts
 from dashboard.pages.correlation.data import (
     POLLUTANT_COLUMNS,
@@ -23,8 +24,8 @@ def _render_sidebar_filters(
 ) -> tuple[str, tuple[date, date], str, MissingStrategy]:
     st.sidebar.markdown("### Correlation Filters")
     city_options = ["All cities"]
-    if "City" in df.columns:
-        city_options += sorted(df["City"].dropna().astype(str).unique().tolist())
+    if COL_CITY in df.columns:
+        city_options += sorted(df[COL_CITY].dropna().astype(str).unique().tolist())
 
     selected_city = st.sidebar.selectbox("City", options=city_options, key="correlation_city")
     min_date, max_date = CorrelationData.date_bounds(df)
