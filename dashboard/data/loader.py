@@ -59,7 +59,7 @@ def load_dataset(kind: DatasetKind, data_dir: Path | str | None = None) -> pd.Da
     return load_csv(p, parse_dates=parse_dates)
 
 
-def data_status_message(data_dir: Path | str | None = None) -> str:
+def data_status_message(data_dir: Path | str | None = None) -> str | None:
     """Human-readable status for sidebar when CSVs are absent."""
     paths = _resolve_paths(data_dir)
     missing = [
@@ -73,8 +73,8 @@ def data_status_message(data_dir: Path | str | None = None) -> str:
         ]
         if p is None
     ]
-    if not missing:
-        return f"Data folder OK: `{paths.data_dir}`"
-    return (
-        f"Place Kaggle CSVs under `{paths.data_dir}`. Missing: {', '.join(missing)}"
-    )
+    if missing:
+        return (
+            f"Place Kaggle CSVs under `{paths.data_dir}`. Missing: {', '.join(missing)}"
+        )
+    
