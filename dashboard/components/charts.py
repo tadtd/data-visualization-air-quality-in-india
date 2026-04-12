@@ -5,12 +5,11 @@ from __future__ import annotations
 import plotly.graph_objects as go
 import streamlit as st
 
-from dashboard.config import AQI_THRESHOLD_LINES, CHART_LAYOUT_DEFAULTS
+from dashboard.config import AQI_THRESHOLD_LINES 
 
 
 def apply_chart_theme(fig: go.Figure) -> go.Figure:
     """Apply the global dashboard theme to a Plotly figure."""
-    fig.update_layout(**CHART_LAYOUT_DEFAULTS)
     fig.update_xaxes(
         gridcolor="rgba(243,244,246,0.8)",
         linecolor="#E5E7EB",

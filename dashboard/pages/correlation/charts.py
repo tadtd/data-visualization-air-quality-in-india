@@ -7,10 +7,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from dashboard.components.charts import apply_chart_theme
-from dashboard.config import AQI_COLOR_SCALE, WHO_LIMITS
 from dashboard.data.schema import COL_AQI, COL_AQI_BUCKET, COL_CITY, COL_DATE
 from dashboard.pages.correlation.data import POLLUTANT_COLUMNS
-from dashboard.theme import aqi_bucket_for_value
 
 
 class CorrelationCharts:
@@ -54,30 +52,28 @@ class CorrelationCharts:
                 f"{selected_pollutant} vs AQI",
                 "No rows available for selected filters.",
             )
-        bucket_colors = {b: c["bg"] for b, c in AQI_COLOR_SCALE.items()}
-        df = df.copy()
-        if COL_AQI_BUCKET in df.columns:
-            color_col = COL_AQI_BUCKET
-        else:
-            df["_bucket"] = df[COL_AQI].apply(aqi_bucket_for_value)
-            color_col = "_bucket"
-
         fig = px.scatter(
-            df, x=selected_pollutant, y=COL_AQI,
-            color=color_col,
-            color_discrete_map=bucket_colors,
+            df,
+            x=selected_pollutant,
+            y=COL_AQI,
+            color=COL_CITY,
             hover_data={
                 COL_CITY: True,
                 COL_DATE: "|%Y-%m-%d",
                 selected_pollutant: ":.2f",
                 COL_AQI: ":.2f",
             },
-            opacity=0.6, render_mode="webgl",
+            opacity=0.65,
+            render_mode="webgl",
         )
-        fig.update_traces(marker=dict(size=5))
+        fig.update_traces(marker=dict(size=6))
         fig.update_layout(
             title=f"{selected_pollutant} vs AQI",
-            height=520, legend_title_text="AQI Category",
+            xaxis_title=selected_pollutant,
+            yaxis_title="AQI",
+            height=520,
+            margin=dict(l=40, r=40, t=60, b=40),
+            legend_title_text="City",
         )
         return apply_chart_theme(fig)
 
@@ -89,22 +85,20 @@ class CorrelationCharts:
                 "No Severe AQI rows available.",
             )
         fig = px.bar(
-            mean_df, x="Pollutant", y="Mean Value",
-            text="Mean Value", color="Pollutant",
+            mean_df,
+            x="Pollutant",
+            y="Mean Value",
+            text="Mean Value",
+            color="Pollutant",
         )
-        fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
-
-        for pollutant, limit in WHO_LIMITS.items():
-            if pollutant in mean_df["Pollutant"].values:
-                fig.add_shape(
-                    type="line", x0=-0.5, x1=len(mean_df) - 0.5,
-                    y0=limit, y1=limit,
-                    line=dict(color="#EF4444", dash="dash", width=1.5),
-                )
-
+        fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
         fig.update_layout(
             title="Mean Pollutant Levels on Severe AQI Days",
-            height=440, showlegend=False,
+            xaxis_title="Pollutant",
+            yaxis_title="Mean Value",
+            height=440,
+            margin=dict(l=40, r=40, t=60, b=40),
+            showlegend=False,
         )
         return apply_chart_theme(fig)
 

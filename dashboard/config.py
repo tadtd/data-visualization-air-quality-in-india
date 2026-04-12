@@ -8,7 +8,7 @@ from pathlib import Path
 # Paths
 # ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DATA_DIR = PROJECT_ROOT / "data" / "Air_Quality_India_Data" / "processed"
+DEFAULT_DATA_DIR = PROJECT_ROOT / "data" / "Air_Quality_India_Data" #/ "processed"
 
 APP_TITLE = "Air Quality in India (2015–2020)"
 APP_ICON = "🌫️"
@@ -53,7 +53,7 @@ WHO_LIMITS: dict[str, float] = {
     "PM10": 45.0,
     "NO2": 25.0,
     "SO2": 40.0,
-    "CO": 300.0,
+    "CO": 4000.0,
     "O3": 100.0,
 }
 
@@ -132,20 +132,6 @@ CHART_COLOR_SEQUENCE: list[str] = [
     "#ECE133",
     "#56B4E9",
 ]
-
-CHART_LAYOUT_DEFAULTS: dict = {
-    "paper_bgcolor": "rgba(0,0,0,0)",
-    "plot_bgcolor": "rgba(0,0,0,0)",
-    "font": {"family": "DM Sans, sans-serif", "color": "#374151"},
-    "margin": {"t": 48, "b": 40, "l": 48, "r": 24},
-    "hoverlabel": {
-        "bgcolor": "#1F2937",
-        "font_size": 13,
-        "font_family": "DM Sans, sans-serif",
-        "font_color": "white",
-        "bordercolor": "#1F2937",
-    },
-}
 
 AQI_THRESHOLD_LINES: list[dict] = [
     {"y": 50,  "color": "#A8E5A0", "label": "Good"},
