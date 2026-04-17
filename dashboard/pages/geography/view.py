@@ -39,13 +39,21 @@ def render() -> None:
 
     section_divider()
 
-    top_n = st.slider(
-        "Số thành phố mỗi nhóm",
-        min_value=3,
-        max_value=min(13, len(df_rank) // 2) if len(df_rank) >= 6 else 3,
-        value=min(10, len(df_rank) // 2) if len(df_rank) >= 6 else 3,
-        key="geo_cr_top_n",
-    )
+    n_cities = len(df_rank)
+    if n_cities >= 6:
+        slider_min = 3
+        slider_max = max(slider_min + 1, min(13, n_cities // 2))
+        slider_val = min(10, n_cities // 2)
+        slider_val = max(slider_min, min(slider_val, slider_max))
+        top_n = st.slider(
+            "Số thành phố mỗi nhóm",
+            min_value=slider_min,
+            max_value=slider_max,
+            value=slider_val,
+            key="geo_cr_top_n",
+        )
+    else:
+        top_n = n_cities  # too few cities to split
     show_chart(GeographyCharts.top_bottom_polluted_clean(df_rank, top_n))
     chart_insight("Chênh lệch AQI giữa thành phố ô nhiễm nhất và sạch nhất có thể lên tới 4–5 lần.")
 
