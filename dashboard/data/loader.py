@@ -1,27 +1,104 @@
-"""CSV loading with Streamlit cache and optional missing-file handling."""
+"""CSV loading with Streamlit cache and optional missing-file handling.
+
+When data files are not present locally (e.g. on Streamlit Cloud),
+the loader automatically downloads them from Kaggle using kagglehub.
+"""
 
 from __future__ import annotations
 
+import logging
+import os
+import shutil
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
-from dashboard.config import DEFAULT_DATA_DIR
+from dashboard.config import DEFAULT_DATA_DIR, KAGGLE_DATASET_HANDLE
 from dashboard.data.schema import COL_DATE, COL_DATETIME, DataPaths, DatasetKind
 
+logger = logging.getLogger(__name__)
+
+# Expected CSV filenames in the dataset
+_EXPECTED_FILES: dict[str, str] = {
+    "city_day": "city_day.csv",
+    "city_hour": "city_hour.csv",
+    "station_day": "station_day.csv",
+    "station_hour": "station_hour.csv",
+    "stations": "stations.csv",
+}
+
+
+# ---------------------------------------------------------------------------
+# Kaggle auto-download
+# ---------------------------------------------------------------------------
+
+def _setup_kaggle_credentials() -> None:
+    """Read Kaggle credentials from Streamlit secrets or env vars."""
+    try:
+        secrets = st.secrets
+        username = secrets.get("KAGGLE_USERNAME", "")
+        key = secrets.get("KAGGLE_KEY", "")
+        if username and key:
+            os.environ.setdefault("KAGGLE_USERNAME", username)
+            os.environ.setdefault("KAGGLE_KEY", key)
+    except Exception:
+        # st.secrets may not be available (e.g. local development)
+        pass
+
+
+def _download_from_kaggle(target_dir: Path) -> None:
+    """Download the dataset from Kaggle and copy files to *target_dir*."""
+    _setup_kaggle_credentials()
+
+    import kagglehub  # lazy import to avoid slow startup when not needed
+
+    logger.info("Downloading dataset '%s' from Kaggle…", KAGGLE_DATASET_HANDLE)
+    with st.spinner("Đang tải dữ liệu từ Kaggle… Vui lòng đợi."):
+        downloaded_path = Path(kagglehub.dataset_download(KAGGLE_DATASET_HANDLE))
+
+    logger.info("Dataset downloaded to: %s", downloaded_path)
+
+    # Ensure destination exists
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy CSV files from downloaded location to our data dir
+    csv_files = list(downloaded_path.rglob("*.csv"))
+    if not csv_files:
+        st.error("Không tìm thấy file CSV nào trong dataset Kaggle.")
+        return
+
+    for src in csv_files:
+        dest = target_dir / src.name
+        if not dest.exists():
+            shutil.copy2(src, dest)
+            logger.info("Copied %s → %s", src.name, dest)
+
+
+def _ensure_data_available(data_dir: Path) -> None:
+    """If any expected CSV is missing, attempt Kaggle download."""
+    missing = [
+        fname
+        for fname in _EXPECTED_FILES.values()
+        if not (data_dir / fname).is_file()
+    ]
+    if missing:
+        logger.info("Missing files: %s – attempting Kaggle download.", missing)
+        _download_from_kaggle(data_dir)
+
+
+# ---------------------------------------------------------------------------
+# Path resolution & CSV loading
+# ---------------------------------------------------------------------------
 
 def _resolve_paths(data_dir: Path | str | None = None) -> DataPaths:
     root = Path(data_dir) if data_dir else DEFAULT_DATA_DIR
-    names = {
-        "city_day": "city_day.csv",
-        "city_hour": "city_hour.csv",
-        "station_day": "station_day.csv",
-        "station_hour": "station_hour.csv",
-        "stations": "stations.csv",
-    }
+
+    # Auto-download from Kaggle when files are missing
+    _ensure_data_available(root)
+
     resolved: dict[str, str | None] = {}
-    for key, fname in names.items():
+    for key, fname in _EXPECTED_FILES.items():
         p = root / fname
         resolved[key] = str(p) if p.is_file() else None
     return DataPaths(data_dir=str(root), **resolved)
@@ -77,4 +154,3 @@ def data_status_message(data_dir: Path | str | None = None) -> str | None:
         return (
             f"Place Kaggle CSVs under `{paths.data_dir}`. Missing: {', '.join(missing)}"
         )
-    

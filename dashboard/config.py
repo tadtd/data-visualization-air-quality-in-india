@@ -10,7 +10,10 @@ import streamlit as st
 # Paths
 # ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DATA_DIR = PROJECT_ROOT / "data" / "Air_Quality_India_Data"
+DEFAULT_DATA_DIR = PROJECT_ROOT / "data" / "Air_Quality_India_Data" / "processed"
+
+# Kaggle dataset handle for auto-download when data is missing (e.g. Streamlit Cloud)
+KAGGLE_DATASET_HANDLE = "dtdat1234/air-quality-in-india"
 
 APP_TITLE = "Chất lượng Không khí tại Ấn Độ (2015–2020)"
 APP_ICON = "🌫️"
