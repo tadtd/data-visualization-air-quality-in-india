@@ -5,27 +5,31 @@ from __future__ import annotations
 import plotly.graph_objects as go
 import streamlit as st
 
-from dashboard.config import AQI_THRESHOLD_LINES 
+from dashboard.config import get_aqi_threshold_lines
 
 
 def apply_chart_theme(fig: go.Figure) -> go.Figure:
     """Apply the global dashboard theme to a Plotly figure."""
+    fig.update_layout(
+        font_family="Be Vietnam Pro",
+        title_font_family="Be Vietnam Pro",
+    )
     fig.update_xaxes(
         gridcolor="rgba(243,244,246,0.8)",
         linecolor="#E5E7EB",
-        tickfont=dict(size=11, color="#9CA3AF"),
+        tickfont=dict(size=11, color="#9CA3AF", family="Be Vietnam Pro"),
     )
     fig.update_yaxes(
         gridcolor="rgba(243,244,246,0.8)",
         linecolor="#E5E7EB",
-        tickfont=dict(size=11, color="#9CA3AF"),
+        tickfont=dict(size=11, color="#9CA3AF", family="Be Vietnam Pro"),
     )
     return fig
 
 
 def add_aqi_reference_lines(fig: go.Figure) -> go.Figure:
     """Add horizontal dashed AQI category threshold lines."""
-    for line in AQI_THRESHOLD_LINES:
+    for line in get_aqi_threshold_lines():
         fig.add_hline(
             y=line["y"],
             line_dash="dash",
@@ -39,17 +43,17 @@ def add_aqi_reference_lines(fig: go.Figure) -> go.Figure:
     return fig
 
 
-def empty_chart(title: str = "Trend") -> go.Figure:
+def empty_chart(title: str = "Biểu đồ") -> go.Figure:
     """Return a lightweight placeholder when a chart has no data."""
     fig = go.Figure()
     fig.add_annotation(
-        text="No data available for this chart.",
+        text="Không có dữ liệu cho biểu đồ này.",
         xref="paper",
         yref="paper",
         x=0.5,
         y=0.5,
         showarrow=False,
-        font=dict(size=14, color="#9CA3AF"),
+        font=dict(size=14, color="#9CA3AF", family="Be Vietnam Pro"),
     )
     fig.update_layout(title=title, height=360, margin=dict(t=40, b=40))
     return apply_chart_theme(fig)

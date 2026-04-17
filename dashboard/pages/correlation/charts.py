@@ -20,7 +20,7 @@ class CorrelationCharts:
         fig.add_annotation(
             text=message, x=0.5, y=0.5,
             xref="paper", yref="paper", showarrow=False,
-            font=dict(color="#9CA3AF"),
+            font=dict(color="#9CA3AF", family="Be Vietnam Pro"),
         )
         fig.update_layout(
             title=title, height=520,
@@ -32,16 +32,16 @@ class CorrelationCharts:
     def pearson_heatmap(corr: pd.DataFrame) -> go.Figure:
         if corr.empty or corr.isna().all().all():
             return CorrelationCharts.empty_state(
-                "Pearson Correlation Heatmap",
-                "No complete rows available for correlation.",
+                "Ma trận tương quan Pearson",
+                "Không đủ dữ liệu để tính tương quan.",
             )
         fig = px.imshow(
             corr, text_auto=".2f",
             color_continuous_scale="RdBu_r",
             zmin=-1, zmax=1, aspect="auto",
-            labels=dict(color="Pearson r"),
+            labels=dict(color="Hệ số r"),
         )
-        fig.update_layout(title="Pearson Correlation Heatmap", height=520)
+        fig.update_layout(title="Ma trận tương quan Pearson", height=520)
         fig.update_xaxes(side="bottom")
         return apply_chart_theme(fig)
 
@@ -50,7 +50,7 @@ class CorrelationCharts:
         if df.empty:
             return CorrelationCharts.empty_state(
                 f"{selected_pollutant} vs AQI",
-                "No rows available for selected filters.",
+                "Không có dữ liệu cho bộ lọc đã chọn.",
             )
         fig = px.scatter(
             df,
@@ -73,7 +73,7 @@ class CorrelationCharts:
             yaxis_title="AQI",
             height=520,
             margin=dict(l=40, r=40, t=60, b=40),
-            legend_title_text="City",
+            legend_title_text="Thành phố",
         )
         return apply_chart_theme(fig)
 
@@ -81,8 +81,8 @@ class CorrelationCharts:
     def severe_contributors_bar(mean_df: pd.DataFrame) -> go.Figure:
         if mean_df.empty:
             return CorrelationCharts.empty_state(
-                "Mean Pollutant Levels on Severe AQI Days",
-                "No Severe AQI rows available.",
+                "Nồng độ trung bình vào ngày AQI Nguy hiểm",
+                "Không có dữ liệu AQI mức Nguy hiểm.",
             )
         fig = px.bar(
             mean_df,
@@ -93,9 +93,9 @@ class CorrelationCharts:
         )
         fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
         fig.update_layout(
-            title="Mean Pollutant Levels on Severe AQI Days",
-            xaxis_title="Pollutant",
-            yaxis_title="Mean Value",
+            title="Nồng độ chất ô nhiễm trung bình vào ngày AQI Nguy hiểm",
+            xaxis_title="Chất ô nhiễm",
+            yaxis_title="Giá trị trung bình",
             height=440,
             margin=dict(l=40, r=40, t=60, b=40),
             showlegend=False,
@@ -106,8 +106,8 @@ class CorrelationCharts:
     def bucket_boxplot(df: pd.DataFrame) -> go.Figure:
         if df.empty or COL_AQI_BUCKET not in df.columns:
             return CorrelationCharts.empty_state(
-                "Pollutant Distribution Across AQI Buckets",
-                "No AQI bucket data available.",
+                "Phân bố chất ô nhiễm theo mức AQI",
+                "Không có dữ liệu mức AQI.",
             )
         long_df = df[[COL_AQI_BUCKET, *POLLUTANT_COLUMNS]].melt(
             id_vars=COL_AQI_BUCKET,
@@ -118,15 +118,17 @@ class CorrelationCharts:
         long_df = long_df.dropna(subset=[COL_AQI_BUCKET, "Value"])
         if long_df.empty:
             return CorrelationCharts.empty_state(
-                "Pollutant Distribution Across AQI Buckets",
-                "No pollutant values available.",
+                "Phân bố chất ô nhiễm theo mức AQI",
+                "Không có dữ liệu chất ô nhiễm.",
             )
         fig = px.box(
             long_df, x="Pollutant", y="Value",
             color=COL_AQI_BUCKET, points=False,
         )
         fig.update_layout(
-            title="Pollutant Distribution Across AQI Buckets",
-            height=500, legend_title_text="AQI Bucket",
+            title="Phân bố chất ô nhiễm theo mức AQI",
+            xaxis_title="Chất ô nhiễm",
+            yaxis_title="Nồng độ",
+            height=500, legend_title_text="Mức AQI",
         )
         return apply_chart_theme(fig)

@@ -6,7 +6,7 @@ from datetime import date
 
 import streamlit as st
 
-from dashboard.config import AQI_BUCKET_ORDER, POLLUTANT_COLUMNS
+from dashboard.config import AQI_BUCKET_ORDER, AQI_BUCKET_VI, POLLUTANT_COLUMNS
 from dashboard.data.schema import FilterState
 from dashboard.data.transforms import default_date_range_from_df, list_cities
 
@@ -26,7 +26,7 @@ def render_filter_state(
     cities_all = list_cities(df)
 
     r = st.sidebar.date_input(
-        "Date range",
+        "Khoảng thời gian",
         value=(d0, d1),
         min_value=date(2000, 1, 1),
         max_value=date(2030, 12, 31),
@@ -38,7 +38,7 @@ def render_filter_state(
         date_start, date_end = d0, d1
 
     city_sel = st.sidebar.multiselect(
-        "Cities (empty = all)",
+        "Thành phố (để trống = tất cả)",
         options=cities_all,
         default=[],
         key=f"{key_prefix}cities",
@@ -47,7 +47,7 @@ def render_filter_state(
     pollutants: list[str] = []
     if show_pollutants:
         pollutants = st.sidebar.multiselect(
-            "Pollutants (for correlation focus)",
+            "Chất ô nhiễm",
             options=list(POLLUTANT_COLUMNS),
             default=list(POLLUTANT_COLUMNS[:6]),
             key=f"{key_prefix}pollutants",
@@ -56,10 +56,13 @@ def render_filter_state(
     buckets: list[str] = []
     if show_buckets and df is not None and not df.empty and "AQI_Bucket" in df.columns:
         present = [b for b in AQI_BUCKET_ORDER if b in set(df["AQI_Bucket"].dropna().astype(str))]
+        # Show Vietnamese labels but keep English values internally
+        bucket_labels = {b: f"{AQI_BUCKET_VI.get(b, b)} ({b})" for b in present}
         buckets = st.sidebar.multiselect(
-            "AQI buckets (empty = all)",
+            "Mức AQI (để trống = tất cả)",
             options=present,
             default=[],
+            format_func=lambda b: bucket_labels.get(b, b),
             key=f"{key_prefix}buckets",
         )
 

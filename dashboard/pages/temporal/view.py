@@ -5,18 +5,18 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.charts import show_chart
-from dashboard.components.filters import render_filter_state
-from dashboard.data.loader import data_status_message
 from dashboard.pages.temporal.charts import TemporalCharts
 from dashboard.pages.temporal.data import TemporalData
-from dashboard.theme import section_divider
+from dashboard.theme import chart_insight, section_divider
 
 
 def render() -> None:
     """Render the Temporal page."""
-    st.sidebar.caption(data_status_message())
-    raw = TemporalData.load_frame()
-    filters = render_filter_state(raw, key_prefix="te_", show_pollutants=False, show_buckets=True)
+    raw = st.session_state.get("shared_raw_df")
+    filters = st.session_state.get("shared_filters")
+    if raw is None or filters is None:
+        st.warning("Dữ liệu chưa được tải.")
+        return
     df = TemporalData.filter_frame(raw, filters)
 
     # --- Yearly + Monthly side by side ---
@@ -27,6 +27,7 @@ def render() -> None:
         show_chart(TemporalCharts.yearly_line(yearly))
     with col_monthly:
         show_chart(TemporalCharts.monthly_line(monthly))
+    chart_insight("AQI có xu hướng giảm nhẹ từ 2017, giảm mạnh năm 2020 do phong tỏa COVID-19.")
 
     section_divider()
 
@@ -36,6 +37,7 @@ def render() -> None:
         top6 = city_monthly.groupby("City")["aqi_mean"].mean().nlargest(6).index
         city_monthly = city_monthly[city_monthly["City"].isin(top6)]
     show_chart(TemporalCharts.city_small_multiples(city_monthly))
+    chart_insight("Mỗi thành phố có biên độ dao động AQI khác nhau — Delhi biến động lớn nhất.")
 
     section_divider()
 
@@ -49,23 +51,24 @@ def render() -> None:
         val_w = f"{winter_mean:.1f}" if winter_mean is not None else "—"
         val_n = f"{nonwinter_mean:.1f}" if nonwinter_mean is not None else "—"
         delta_str = (
-            f"{winter_mean - nonwinter_mean:+.1f} vs non-winter"
+            f"{winter_mean - nonwinter_mean:+.1f} so với ngoài mùa đông"
             if (winter_mean is not None and nonwinter_mean is not None)
             else None
         )
         kpi_left, kpi_right = st.columns(2)
         kpi_left.metric(
-            "Winter Mean AQI (Nov–Feb)",
+            "AQI mùa đông (T11–T2)",
             val_w,
             delta=delta_str,
             delta_color="inverse",
         )
         kpi_right.metric(
-            "Non-Winter Mean AQI",
+            "AQI ngoài mùa đông",
             val_n,
         )
     profile = TemporalData.seasonal_monthly_profile(df)
     show_chart(TemporalCharts.seasonal_profile(profile))
+    chart_insight("Mùa đông (tháng 11–2) AQI cao hơn rõ rệt do nghịch nhiệt và đốt rơm rạ.")
 
     section_divider()
 
@@ -78,12 +81,14 @@ def render() -> None:
     # --- City trend slopes ---
     slopes = TemporalData.city_trend_slopes(df)
     if slopes.empty:
-        st.info("Not enough monthly data to compute city trends. Widen the date range.")
+        st.info("Không đủ dữ liệu hàng tháng để tính xu hướng. Hãy mở rộng khoảng thời gian.")
     else:
         show_chart(TemporalCharts.trend_slope_bar(slopes))
+        chart_insight("Giá trị âm = cải thiện, giá trị dương = xấu đi. Nhiều thành phố miền Nam có xu hướng cải thiện.")
 
     section_divider()
 
     # --- Breach days ---
     breach_df = TemporalData.aqi_breach_count_by_year(df, threshold=200)
     show_chart(TemporalCharts.aqi_breach(breach_df, threshold=200))
+    chart_insight("Số ngày AQI vượt ngưỡng 200 giảm đáng kể trong năm 2020.")

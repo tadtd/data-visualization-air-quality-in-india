@@ -20,6 +20,13 @@ def page_header(title: str, subtitle: str | None = None) -> None:
 
 def app_sidebar_title() -> None:
     st.sidebar.title(APP_TITLE)
+    st.sidebar.toggle(
+        "♿ Chế độ mù màu",
+        value=False,
+        key="colorblind_mode",
+        help="Bật chế độ bảng màu thân thiện với người mù màu (Okabe-Ito)",
+    )
+    st.sidebar.markdown("---")
 
 
 def section(title: str, *, expanded: bool = True) -> None:
@@ -30,12 +37,12 @@ def section(title: str, *, expanded: bool = True) -> None:
 
 def render_filter_summary(filters: "FilterState") -> None:
     """Compact summary of active filters (debug / clarity)."""
-    with st.expander("Active filters", expanded=False):
+    with st.expander("Bộ lọc đang áp dụng", expanded=False):
         st.json(
             {
-                "date_range": [str(filters.date_start), str(filters.date_end)],
-                "cities": filters.cities,
-                "pollutants": filters.pollutants,
-                "aqi_buckets": filters.aqi_buckets,
+                "khoảng_thời_gian": [str(filters.date_start), str(filters.date_end)],
+                "thành_phố": filters.cities,
+                "chất_ô_nhiễm": filters.pollutants,
+                "mức_aqi": filters.aqi_buckets,
             }
         )

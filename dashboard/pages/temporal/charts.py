@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from dashboard.components.charts import add_aqi_reference_lines, apply_chart_theme, empty_chart
-from dashboard.config import CHART_COLOR_SEQUENCE
+from dashboard.config import get_chart_color_sequence
 
 
 class TemporalCharts:
@@ -18,7 +18,8 @@ class TemporalCharts:
     @staticmethod
     def yearly_line(df: pd.DataFrame) -> go.Figure:
         if df.empty:
-            return empty_chart("Yearly Mean AQI (2015–2020)")
+            return empty_chart("AQI trung bình theo năm (2015–2020)")
+        colors = get_chart_color_sequence()
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
@@ -27,7 +28,7 @@ class TemporalCharts:
                 fill="toself",
                 fillcolor="rgba(1,115,178,0.15)",
                 line=dict(color="rgba(255,255,255,0)"),
-                name="±1 Std Dev",
+                name="±1 Độ lệch chuẩn",
                 hoverinfo="skip",
             )
         )
@@ -36,9 +37,9 @@ class TemporalCharts:
                 x=df["year"],
                 y=df["aqi_mean"],
                 mode="lines+markers",
-                line=dict(color=CHART_COLOR_SEQUENCE[0], width=2),
+                line=dict(color=colors[0], width=2),
                 marker=dict(size=8),
-                name="Mean AQI",
+                name="AQI trung bình",
             )
         )
         add_aqi_reference_lines(fig)
@@ -50,7 +51,9 @@ class TemporalCharts:
                 xanchor="left", yanchor="top",
             )
         fig.update_layout(
-            title="Yearly Mean AQI (2015–2020)",
+            title="AQI trung bình theo năm (2015–2020)",
+            xaxis_title="Năm",
+            yaxis_title="AQI",
             height=380,
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
@@ -60,15 +63,16 @@ class TemporalCharts:
     @staticmethod
     def monthly_line(df: pd.DataFrame) -> go.Figure:
         if df.empty:
-            return empty_chart("National Monthly AQI")
+            return empty_chart("AQI toàn quốc theo tháng")
+        colors = get_chart_color_sequence()
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
                 x=df["year_month"], y=df["aqi_mean"],
                 mode="lines", fill="tozeroy",
-                line=dict(color=CHART_COLOR_SEQUENCE[0], width=2),
+                line=dict(color=colors[0], width=2),
                 fillcolor="rgba(1,115,178,0.12)",
-                name="Mean AQI",
+                name="AQI trung bình",
             )
         )
         add_aqi_reference_lines(fig)
@@ -79,14 +83,20 @@ class TemporalCharts:
                 showarrow=False, font=dict(size=10, color="grey"),
                 xanchor="left", yanchor="top",
             )
-        fig.update_layout(title="National Monthly AQI", height=400)
+        fig.update_layout(
+            title="AQI toàn quốc theo tháng",
+            xaxis_title="Tháng",
+            yaxis_title="AQI",
+            height=400,
+        )
         fig.update_xaxes(tickangle=-45, nticks=12)
         return apply_chart_theme(fig)
 
     @staticmethod
     def city_small_multiples(df: pd.DataFrame, *, ncols: int = 2) -> go.Figure:
         if df.empty:
-            return empty_chart("Monthly AQI by City")
+            return empty_chart("AQI theo tháng — từng thành phố")
+        colors = get_chart_color_sequence()
         cities = (
             df.groupby("City")["aqi_mean"]
             .mean()
@@ -104,7 +114,7 @@ class TemporalCharts:
         for i, city in enumerate(cities):
             row, col = divmod(i, ncols)
             city_df = df[df["City"] == city].sort_values("year_month").reset_index(drop=True)
-            color = CHART_COLOR_SEQUENCE[i % len(CHART_COLOR_SEQUENCE)]
+            color = colors[i % len(colors)]
             fig.add_trace(
                 go.Scatter(
                     x=city_df["year_month"], y=city_df["aqi_mean"],
@@ -124,7 +134,7 @@ class TemporalCharts:
                         go.Scatter(
                             x=city_df["year_month"].tolist(), y=trend_y,
                             mode="lines", line=dict(color="black", dash="dash", width=1.5),
-                            name="Trend", showlegend=False,
+                            name="Xu hướng", showlegend=False,
                         ),
                         row=row + 1, col=col + 1,
                     )
@@ -137,7 +147,7 @@ class TemporalCharts:
         fig.update_yaxes(range=[0, y_max])
         fig.update_xaxes(tickangle=-45, nticks=6)
         fig.update_layout(
-            title="Monthly AQI — Top 6 Most Polluted Cities",
+            title="AQI theo tháng — Top 6 thành phố ô nhiễm nhất",
             height=220 * nrows + 80,
             margin=dict(t=60, b=40, l=40, r=20),
         )
@@ -146,9 +156,10 @@ class TemporalCharts:
     @staticmethod
     def seasonal_profile(df: pd.DataFrame) -> go.Figure:
         if df.empty:
-            return empty_chart("Seasonal AQI Profile")
-        color_winter = CHART_COLOR_SEQUENCE[1]
-        color_nonwinter = CHART_COLOR_SEQUENCE[0]
+            return empty_chart("Biểu đồ mùa vụ AQI")
+        colors = get_chart_color_sequence()
+        color_winter = colors[1]
+        color_nonwinter = colors[0]
 
         def std_array(mask: pd.Series) -> list:
             return [value if pd.notna(value) else None for value in df.loc[mask, "aqi_std"]]
@@ -160,7 +171,7 @@ class TemporalCharts:
                 x=df.loc[~winter_mask, "month_name"],
                 y=df.loc[~winter_mask, "aqi_mean"],
                 error_y=dict(type="data", array=std_array(~winter_mask), visible=True),
-                marker_color=color_nonwinter, name="Non-Winter",
+                marker_color=color_nonwinter, name="Ngoài mùa đông",
             )
         )
         fig.add_trace(
@@ -168,11 +179,13 @@ class TemporalCharts:
                 x=df.loc[winter_mask, "month_name"],
                 y=df.loc[winter_mask, "aqi_mean"],
                 error_y=dict(type="data", array=std_array(winter_mask), visible=True),
-                marker_color=color_winter, name="Winter (Nov–Feb)",
+                marker_color=color_winter, name="Mùa đông (T11–T2)",
             )
         )
         fig.update_layout(
-            title="Seasonal AQI Profile by Calendar Month",
+            title="Biểu đồ AQI theo tháng trong năm (mùa vụ)",
+            xaxis_title="Tháng",
+            yaxis_title="AQI trung bình",
             height=400, barmode="group",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             xaxis=dict(categoryorder="array", categoryarray=df["month_name"].tolist()),
@@ -182,16 +195,17 @@ class TemporalCharts:
     @staticmethod
     def trend_slope_bar(df: pd.DataFrame, *, top_n: int = 15) -> go.Figure:
         if df.empty:
-            return empty_chart("City AQI Trends")
+            return empty_chart("Xu hướng AQI theo thành phố")
+        colors = get_chart_color_sequence()
         improving = df[df["trend_label"] == "Improving"].sort_values("slope").head(top_n)
         stable = df[df["trend_label"] == "Stable"]
         worsening = df[df["trend_label"] == "Worsening"].sort_values("slope", ascending=False).head(top_n)
         sub = pd.concat([improving, stable, worsening]).drop_duplicates().sort_values("slope")
         fig = go.Figure()
-        for label, color in [
-            ("Improving", CHART_COLOR_SEQUENCE[2]),
-            ("Stable", CHART_COLOR_SEQUENCE[5]),
-            ("Worsening", "#D62728"),
+        for label, vi_label, color in [
+            ("Improving", "Cải thiện", colors[2]),
+            ("Stable", "Ổn định", colors[5]),
+            ("Worsening", "Xấu đi", "#D62728"),
         ]:
             group = sub[sub["trend_label"] == label]
             if group.empty:
@@ -199,19 +213,21 @@ class TemporalCharts:
             fig.add_trace(
                 go.Bar(
                     y=group["City"], x=group["slope"],
-                    orientation="h", marker_color=color, name=label,
+                    orientation="h", marker_color=color, name=vi_label,
                     customdata=group[["r_squared", "n_months"]].values,
                     hovertemplate=(
                         "<b>%{y}</b><br>"
-                        "Slope: %{x:.3f} AQI/month<br>"
+                        "Độ dốc: %{x:.3f} AQI/tháng<br>"
                         "R²: %{customdata[0]:.2f}<br>"
-                        "Months: %{customdata[1]}<extra></extra>"
+                        "Số tháng: %{customdata[1]}<extra></extra>"
                     ),
                 )
             )
         fig.add_vline(x=0, line_dash="dash", line_color="black", line_width=1)
         fig.update_layout(
-            title="City AQI Trends (negative = improving, positive = worsening)",
+            title="Xu hướng AQI theo thành phố (âm = cải thiện, dương = xấu đi)",
+            xaxis_title="Độ dốc (AQI/tháng)",
+            yaxis_title="",
             height=max(380, 28 * len(sub) + 100),
             showlegend=True,
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -224,7 +240,8 @@ class TemporalCharts:
     def year_on_year(df: pd.DataFrame) -> go.Figure:
         """One line per year overlaid on a 12-month x-axis."""
         if df.empty:
-            return empty_chart("Year-on-Year AQI Comparison")
+            return empty_chart("So sánh AQI qua các năm")
+        colors = get_chart_color_sequence()
         fig = go.Figure()
         years = sorted(df["year"].unique())
         n = len(years)
@@ -235,14 +252,16 @@ class TemporalCharts:
                 go.Scatter(
                     x=yr_df["month_name"], y=yr_df["aqi_mean"],
                     mode="lines+markers",
-                    line=dict(color=CHART_COLOR_SEQUENCE[0], width=2),
+                    line=dict(color=colors[0], width=2),
                     opacity=shade,
                     marker=dict(size=5),
                     name=str(int(year)),
                 )
             )
         fig.update_layout(
-            title="Year-on-Year AQI Comparison",
+            title="So sánh AQI qua các năm",
+            xaxis_title="Tháng",
+            yaxis_title="AQI trung bình",
             height=400,
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
@@ -251,13 +270,16 @@ class TemporalCharts:
     @staticmethod
     def aqi_breach(df: pd.DataFrame, *, threshold: int = 200) -> go.Figure:
         if df.empty:
-            return empty_chart(f"Days AQI > {threshold} by Year")
+            return empty_chart(f"Số ngày AQI > {threshold} theo năm")
+        colors = get_chart_color_sequence()
         fig = px.bar(
             df, x="year", y="breach_days",
-            color_discrete_sequence=[CHART_COLOR_SEQUENCE[1]],
+            color_discrete_sequence=[colors[1]],
         )
         fig.update_layout(
-            title=f"Days AQI > {threshold} by Year",
+            title=f"Số ngày AQI vượt {threshold} theo năm",
+            xaxis_title="Năm",
+            yaxis_title="Số ngày",
             height=360,
         )
         fig.update_xaxes(dtick=1)
