@@ -36,53 +36,80 @@ _EXPECTED_FILES: dict[str, str] = {
 def _setup_kaggle_credentials() -> None:
     """Read Kaggle credentials from Streamlit secrets and configure kagglehub.
 
-    Writes credentials to both environment variables AND the standard
-    ``~/.kaggle/kaggle.json`` file so that kagglehub can authenticate.
+    Supports two auth methods:
+    - **New API Token** (KGAT...): set ``KAGGLE_API_TOKEN`` env var
+      and write to ``~/.kaggle/access_token``.
+    - **Legacy key**: set ``KAGGLE_USERNAME`` + ``KAGGLE_KEY`` env vars
+      and write ``~/.kaggle/kaggle.json``.
     """
     import json
 
-    username = os.environ.get("KAGGLE_USERNAME", "")
-    key = os.environ.get("KAGGLE_KEY", "")
+    api_token = ""
+    username = ""
+    key = ""
 
-    # Try reading from Streamlit secrets first
+    # Read from Streamlit secrets
     try:
-        username = st.secrets.get("KAGGLE_USERNAME", "") or username
-        key = st.secrets.get("KAGGLE_KEY", "") or key
+        api_token = st.secrets.get("KAGGLE_API_TOKEN", "") or ""
+        username = st.secrets.get("KAGGLE_USERNAME", "") or ""
+        key = st.secrets.get("KAGGLE_KEY", "") or ""
     except Exception:
         pass
 
-    if not username or not key:
-        logger.warning("Kaggle credentials not found. Private datasets will fail.")
-        st.warning(
-            "⚠️ Kaggle credentials chưa được cấu hình.\n\n"
-            "Hãy thêm vào **Streamlit Cloud → Settings → Secrets**:\n"
-            "```toml\n"
-            'KAGGLE_USERNAME = "your-username"\n'
-            'KAGGLE_KEY = "your-api-key"\n'
-            "```"
-        )
+    # Fallback to env vars
+    api_token = api_token or os.environ.get("KAGGLE_API_TOKEN", "")
+    username = username or os.environ.get("KAGGLE_USERNAME", "")
+    key = key or os.environ.get("KAGGLE_KEY", "")
+
+    kaggle_dir = Path.home() / ".kaggle"
+
+    # --- Method 1: New API Token (KGAT...) ---
+    if api_token:
+        os.environ["KAGGLE_API_TOKEN"] = api_token
+
+        # Write to ~/.kaggle/access_token
+        kaggle_dir.mkdir(parents=True, exist_ok=True)
+        access_token_file = kaggle_dir / "access_token"
+        if not access_token_file.exists():
+            access_token_file.write_text(api_token)
+            try:
+                access_token_file.chmod(0o600)
+            except OSError:
+                pass
+        logger.info("Kaggle API token configured (new-style).")
         return
 
-    # Set environment variables
-    os.environ["KAGGLE_USERNAME"] = username
-    os.environ["KAGGLE_KEY"] = key
+    # --- Method 2: Legacy username + key ---
+    if username and key:
+        os.environ["KAGGLE_USERNAME"] = username
+        os.environ["KAGGLE_KEY"] = key
 
-    # Write ~/.kaggle/kaggle.json (the standard auth method for kagglehub)
-    kaggle_dir = Path.home() / ".kaggle"
-    kaggle_json = kaggle_dir / "kaggle.json"
-    if not kaggle_json.exists():
         kaggle_dir.mkdir(parents=True, exist_ok=True)
-        kaggle_json.write_text(
-            json.dumps({"username": username, "key": key})
-        )
-        # Restrict permissions on Linux/Mac (Streamlit Cloud runs Linux)
-        try:
-            kaggle_json.chmod(0o600)
-        except OSError:
-            pass
-        logger.info("Wrote Kaggle credentials to %s", kaggle_json)
+        kaggle_json = kaggle_dir / "kaggle.json"
+        if not kaggle_json.exists():
+            kaggle_json.write_text(json.dumps({"username": username, "key": key}))
+            try:
+                kaggle_json.chmod(0o600)
+            except OSError:
+                pass
+        logger.info("Kaggle credentials configured (legacy) for user '%s'.", username)
+        return
 
-    logger.info("Kaggle credentials configured for user '%s'.", username)
+    # --- No credentials found ---
+    logger.warning("Kaggle credentials not found. Private datasets will fail.")
+    st.warning(
+        "⚠️ Kaggle credentials chưa được cấu hình.\n\n"
+        "Thêm vào **Streamlit Cloud → Settings → Secrets**:\n\n"
+        "**Cách 1 — API Token mới (khuyến nghị):**\n"
+        "```toml\n"
+        'KAGGLE_API_TOKEN = "KGAT...your-token"\n'
+        "```\n\n"
+        "**Cách 2 — Legacy key:**\n"
+        "```toml\n"
+        'KAGGLE_USERNAME = "your-username"\n'
+        'KAGGLE_KEY = "your-hex-key"\n'
+        "```"
+    )
 
 
 def _download_from_kaggle(target_dir: Path) -> None:
