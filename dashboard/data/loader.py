@@ -34,23 +34,55 @@ _EXPECTED_FILES: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 def _setup_kaggle_credentials() -> None:
-    """Read Kaggle credentials from Streamlit secrets or env vars."""
+    """Read Kaggle credentials from Streamlit secrets and configure kagglehub.
+
+    Writes credentials to both environment variables AND the standard
+    ``~/.kaggle/kaggle.json`` file so that kagglehub can authenticate.
+    """
+    import json
+
+    username = os.environ.get("KAGGLE_USERNAME", "")
+    key = os.environ.get("KAGGLE_KEY", "")
+
+    # Try reading from Streamlit secrets first
     try:
-        secrets = st.secrets
-        username = secrets.get("KAGGLE_USERNAME", "")
-        key = secrets.get("KAGGLE_KEY", "")
-        if username and key:
-            # Use direct assignment — setdefault won't overwrite empty strings
-            os.environ["KAGGLE_USERNAME"] = username
-            os.environ["KAGGLE_KEY"] = key
-            logger.info("Kaggle credentials loaded from Streamlit secrets.")
+        username = st.secrets.get("KAGGLE_USERNAME", "") or username
+        key = st.secrets.get("KAGGLE_KEY", "") or key
     except Exception:
-        # st.secrets may not be available (e.g. local development)
         pass
 
-    # Verify credentials are available
-    if not os.environ.get("KAGGLE_USERNAME") or not os.environ.get("KAGGLE_KEY"):
+    if not username or not key:
         logger.warning("Kaggle credentials not found. Private datasets will fail.")
+        st.warning(
+            "⚠️ Kaggle credentials chưa được cấu hình.\n\n"
+            "Hãy thêm vào **Streamlit Cloud → Settings → Secrets**:\n"
+            "```toml\n"
+            'KAGGLE_USERNAME = "your-username"\n'
+            'KAGGLE_KEY = "your-api-key"\n'
+            "```"
+        )
+        return
+
+    # Set environment variables
+    os.environ["KAGGLE_USERNAME"] = username
+    os.environ["KAGGLE_KEY"] = key
+
+    # Write ~/.kaggle/kaggle.json (the standard auth method for kagglehub)
+    kaggle_dir = Path.home() / ".kaggle"
+    kaggle_json = kaggle_dir / "kaggle.json"
+    if not kaggle_json.exists():
+        kaggle_dir.mkdir(parents=True, exist_ok=True)
+        kaggle_json.write_text(
+            json.dumps({"username": username, "key": key})
+        )
+        # Restrict permissions on Linux/Mac (Streamlit Cloud runs Linux)
+        try:
+            kaggle_json.chmod(0o600)
+        except OSError:
+            pass
+        logger.info("Wrote Kaggle credentials to %s", kaggle_json)
+
+    logger.info("Kaggle credentials configured for user '%s'.", username)
 
 
 def _download_from_kaggle(target_dir: Path) -> None:
