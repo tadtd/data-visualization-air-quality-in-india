@@ -40,11 +40,17 @@ def _setup_kaggle_credentials() -> None:
         username = secrets.get("KAGGLE_USERNAME", "")
         key = secrets.get("KAGGLE_KEY", "")
         if username and key:
-            os.environ.setdefault("KAGGLE_USERNAME", username)
-            os.environ.setdefault("KAGGLE_KEY", key)
+            # Use direct assignment — setdefault won't overwrite empty strings
+            os.environ["KAGGLE_USERNAME"] = username
+            os.environ["KAGGLE_KEY"] = key
+            logger.info("Kaggle credentials loaded from Streamlit secrets.")
     except Exception:
         # st.secrets may not be available (e.g. local development)
         pass
+
+    # Verify credentials are available
+    if not os.environ.get("KAGGLE_USERNAME") or not os.environ.get("KAGGLE_KEY"):
+        logger.warning("Kaggle credentials not found. Private datasets will fail.")
 
 
 def _download_from_kaggle(target_dir: Path) -> None:
@@ -54,8 +60,22 @@ def _download_from_kaggle(target_dir: Path) -> None:
     import kagglehub  # lazy import to avoid slow startup when not needed
 
     logger.info("Downloading dataset '%s' from Kaggle…", KAGGLE_DATASET_HANDLE)
-    with st.spinner("Đang tải dữ liệu từ Kaggle… Vui lòng đợi."):
-        downloaded_path = Path(kagglehub.dataset_download(KAGGLE_DATASET_HANDLE))
+    try:
+        with st.spinner("Đang tải dữ liệu từ Kaggle… Vui lòng đợi."):
+            downloaded_path = Path(kagglehub.dataset_download(KAGGLE_DATASET_HANDLE))
+    except Exception as exc:
+        st.error(
+            f"❌ Không thể tải dataset từ Kaggle.\n\n"
+            f"**Lỗi:** `{exc}`\n\n"
+            f"**Kiểm tra:**\n"
+            f"1. Dataset `{KAGGLE_DATASET_HANDLE}` có tồn tại trên Kaggle?\n"
+            f"2. Nếu dataset **Private**, hãy thêm Secrets trên Streamlit Cloud:\n"
+            f"   - `KAGGLE_USERNAME = \"your-username\"`\n"
+            f"   - `KAGGLE_KEY = \"your-api-key\"`\n"
+            f"3. Lấy API key tại: https://www.kaggle.com/settings → API → Create New Token"
+        )
+        st.stop()
+        return
 
     logger.info("Dataset downloaded to: %s", downloaded_path)
 
