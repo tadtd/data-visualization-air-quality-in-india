@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import json
 
 from dashboard.config import DEFAULT_DATA_DIR, KAGGLE_DATASET_HANDLE
 from dashboard.data.schema import COL_DATE, COL_DATETIME, DataPaths, DatasetKind
@@ -42,7 +43,6 @@ def _setup_kaggle_credentials() -> None:
     - **Legacy key**: set ``KAGGLE_USERNAME`` + ``KAGGLE_KEY`` env vars
       and write ``~/.kaggle/kaggle.json``.
     """
-    import json
 
     api_token = ""
     username = ""

@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from dashboard.components.charts import add_aqi_reference_lines, apply_chart_theme, empty_chart
-from dashboard.config import get_chart_color_sequence
+from dashboard.config import TREND_LABELS, get_chart_color_sequence
 
 
 class TemporalCharts:
@@ -197,15 +197,15 @@ class TemporalCharts:
         if df.empty:
             return empty_chart("Xu hướng AQI theo thành phố")
         colors = get_chart_color_sequence()
-        improving = df[df["trend_label"] == "Improving"].sort_values("slope").head(top_n)
-        stable = df[df["trend_label"] == "Stable"]
-        worsening = df[df["trend_label"] == "Worsening"].sort_values("slope", ascending=False).head(top_n)
+        improving = df[df["trend_label"] == TREND_LABELS["improving"]].sort_values("slope").head(top_n)
+        stable = df[df["trend_label"] == TREND_LABELS["stable"]]
+        worsening = df[df["trend_label"] == TREND_LABELS["worsening"]].sort_values("slope", ascending=False).head(top_n)
         sub = pd.concat([improving, stable, worsening]).drop_duplicates().sort_values("slope")
         fig = go.Figure()
-        for label, vi_label, color in [
-            ("Improving", "Cải thiện", colors[2]),
-            ("Stable", "Ổn định", colors[5]),
-            ("Worsening", "Xấu đi", "#D62728"),
+        for label, color in [
+            (TREND_LABELS["improving"], colors[2]),
+            (TREND_LABELS["stable"], colors[5]),
+            (TREND_LABELS["worsening"], "#D62728"),
         ]:
             group = sub[sub["trend_label"] == label]
             if group.empty:
@@ -213,7 +213,7 @@ class TemporalCharts:
             fig.add_trace(
                 go.Bar(
                     y=group["City"], x=group["slope"],
-                    orientation="h", marker_color=color, name=vi_label,
+                    orientation="h", marker_color=color, name=label,
                     customdata=group[["r_squared", "n_months"]].values,
                     hovertemplate=(
                         "<b>%{y}</b><br>"

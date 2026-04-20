@@ -48,10 +48,17 @@ def render() -> None:
         )
 
     with scatter_col:
-        selected_pollutant = st.selectbox(
-            "Chất ô nhiễm (biểu đồ phân tán)",
-            options=POLLUTANT_COLUMNS, key="correlation_pollutant",
-        )
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            selected_pollutant = st.selectbox(
+                "Chất ô nhiễm",
+                options=POLLUTANT_COLUMNS, key="correlation_pollutant",
+            )
+        with sc2:
+            scatter_selected_city = st.selectbox(
+                "Thành phố (phân tán)",
+                options=city_options, key="scatter_correlation_city",
+            )
 
     missing_strategy: MissingStrategy = st.sidebar.radio(
         "Xử lý giá trị thiếu",
@@ -63,23 +70,36 @@ def render() -> None:
         key="correlation_missing_strategy",
     )
 
-    # Apply correlation-specific city filter
-    corr_city = "All cities" if selected_city == "Tất cả thành phố" else selected_city
-    filtered_df = CorrelationData.filter_data(
-        base_df, corr_city, (filters.date_start, filters.date_end),
+    # Apply correlation-specific city filter for heatmap
+    corr_heatmap_city = "All cities" if selected_city == "Tất cả thành phố" else selected_city
+    filtered_heatmap_df = CorrelationData.filter_data(
+        base_df, corr_heatmap_city, (filters.date_start, filters.date_end),
     )
-    analysis_df = CorrelationData.handle_missing_values(filtered_df, missing_strategy)
+    analysis_heatmap_df = CorrelationData.handle_missing_values(filtered_heatmap_df, missing_strategy)
 
-    if analysis_df.empty:
+    # Apply correlation-specific city filter for scatter
+    corr_scatter_city = "All cities" if scatter_selected_city == "Tất cả thành phố" else scatter_selected_city
+    filtered_scatter_df = CorrelationData.filter_data(
+        base_df, corr_scatter_city, (filters.date_start, filters.date_end),
+    )
+    analysis_scatter_df = CorrelationData.handle_missing_values(filtered_scatter_df, missing_strategy)
+
+    if analysis_heatmap_df.empty and analysis_scatter_df.empty:
         st.warning("Không còn dữ liệu sau khi lọc.")
         return
 
-    correlation = CorrelationData.pearson_matrix(analysis_df)
+    correlation = CorrelationData.pearson_matrix(analysis_heatmap_df)
 
     with heatmap_col:
-        st.plotly_chart(CorrelationCharts.pearson_heatmap(correlation), width="stretch")
+        if not analysis_heatmap_df.empty:
+            st.plotly_chart(CorrelationCharts.pearson_heatmap(correlation), width="stretch")
+        else:
+            st.warning("Không đủ dữ liệu cho ma trận tương quan.")
     with scatter_col:
-        st.plotly_chart(CorrelationCharts.aqi_scatter(analysis_df, selected_pollutant), width="stretch")
+        if not analysis_scatter_df.empty:
+            st.plotly_chart(CorrelationCharts.aqi_scatter(analysis_scatter_df, selected_pollutant), width="stretch")
+        else:
+            st.warning("Không đủ dữ liệu cho biểu đồ phân tán.")
     chart_insight("PM2.5 và PM10 thường có tương quan mạnh nhất với AQI — đây là hai chất ô nhiễm chính cần kiểm soát.")
 
     section_divider()
@@ -103,4 +123,4 @@ def render() -> None:
 
     # --- Optional boxplot ---
     if st.checkbox("Hiển thị phân bố chất ô nhiễm theo mức AQI", key="correlation_show_bucket_boxplot"):
-        st.plotly_chart(CorrelationCharts.bucket_boxplot(filtered_df), width="stretch")
+        st.plotly_chart(CorrelationCharts.bucket_boxplot(filtered_heatmap_df), width="stretch")
