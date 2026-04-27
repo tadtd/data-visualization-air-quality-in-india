@@ -27,7 +27,6 @@ class FilterState:
     date_start: date
     date_end: date
     cities: list[str] = field(default_factory=list)
-    pollutants: list[str] = field(default_factory=list)
     aqi_buckets: list[str] = field(default_factory=list)
 
 
