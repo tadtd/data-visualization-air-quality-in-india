@@ -113,11 +113,17 @@ def render() -> None:
 
     if severe_means.empty:
         st.info("Không có dữ liệu AQI mức Nguy hiểm trong khoảng thời gian đã chọn.")
+        severe_insight = "Không đủ dữ liệu để rút ra xu hướng chất ô nhiễm trong các ngày AQI nguy hiểm."
     else:
         st.metric("Chất ô nhiễm đóng góp lớn nhất", str(severe_means.iloc[0]["Pollutant"]),
                    f"Trung bình: {severe_means.iloc[0]['Mean Value']:.1f} | Ngày nguy hiểm: {severe_rows}")
+        top_pollutant = str(severe_means.iloc[0]["Pollutant"])
+        severe_insight = (
+            f"Trong các ngày AQI nguy hiểm, {top_pollutant} có nồng độ trung bình cao nhất "
+            "trong nhóm chất được theo dõi."
+        )
     st.plotly_chart(CorrelationCharts.severe_contributors_bar(severe_means), width="stretch")
-    chart_insight("Vào những ngày AQI nguy hiểm, nồng độ PM2.5 thường tăng gấp nhiều lần so với mức trung bình.")
+    chart_insight(severe_insight)
 
     section_divider()
 
