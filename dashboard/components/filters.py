@@ -49,7 +49,7 @@ def render_filter_state(
         # Show Vietnamese labels but keep English values internally
         bucket_labels = {b: f"{AQI_BUCKET_VI.get(b, b)} ({b})" for b in present}
         buckets = st.sidebar.multiselect(
-            "Mức AQI (để trống = tất cả)",
+            "Nhóm thành phố theo AQI trung bình (toàn bộ dữ liệu)",
             options=present,
             default=[],
             format_func=lambda b: bucket_labels.get(b, b),
