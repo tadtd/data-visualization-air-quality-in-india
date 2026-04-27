@@ -8,6 +8,7 @@ import streamlit as st
 
 from dashboard.components.charts import show_chart
 from dashboard.components.kpi_cards import render_kpi_row
+from dashboard.config import AQI_BUCKET_ORDER, AQI_BUCKET_VI
 from dashboard.pages.overview.charts import OverviewCharts
 from dashboard.pages.overview.data import OverviewData
 from dashboard.theme import aqi_bucket_for_value, aqi_pill_html, chart_insight, hero_number_html, section_divider
@@ -59,6 +60,21 @@ def render() -> None:
 
     # --- India Map ---
     city_coords = OverviewData.city_mean_with_coords(df)
+    if not city_coords.empty:
+        city_coords = city_coords.copy()
+        city_coords["aqi_bucket"] = city_coords["aqi_mean"].apply(aqi_bucket_for_value)
+        available_buckets = [b for b in AQI_BUCKET_ORDER if b in set(city_coords["aqi_bucket"])]
+        bucket_labels = {b: f"{AQI_BUCKET_VI.get(b, b)} ({b})" for b in available_buckets}
+        selected_map_buckets = st.multiselect(
+            "Lọc bản đồ theo nhóm AQI thành phố",
+            options=available_buckets,
+            default=[],
+            format_func=lambda b: bucket_labels.get(b, b),
+            key="overview_map_aqi_buckets",
+            help="Chỉ áp dụng cho bản đồ ở tab Tổng quan.",
+        )
+        if selected_map_buckets:
+            city_coords = city_coords[city_coords["aqi_bucket"].isin(selected_map_buckets)]
     show_chart(OverviewCharts.india_map(city_coords))
     chart_insight("Kích thước và màu sắc vòng tròn thể hiện mức AQI trung bình — vòng càng lớn, ô nhiễm càng nặng.")
 

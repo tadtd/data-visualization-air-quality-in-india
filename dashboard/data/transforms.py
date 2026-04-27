@@ -6,7 +6,7 @@ from datetime import date
 
 import pandas as pd
 
-from dashboard.config import AQI_RANGES, DANGEROUS_AQI_BUCKETS
+from dashboard.config import DANGEROUS_AQI_BUCKETS
 from dashboard.data.schema import COL_AQI, COL_AQI_BUCKET, COL_CITY, COL_DATE, FilterState
 
 
@@ -23,41 +23,11 @@ def _mask_city(df: pd.DataFrame, filters: FilterState) -> pd.Series:
     return df[COL_CITY].isin(filters.cities)
 
 
-def _mask_bucket(df: pd.DataFrame, filters: FilterState) -> pd.Series:
-    if not filters.aqi_buckets or COL_CITY not in df.columns or COL_AQI not in df.columns:
-        return pd.Series(True, index=df.index)
-
-    # Sidebar AQI filter works at city level: classify each city by its
-    # overall mean AQI on the full loaded dataset, then keep cities in
-    # selected buckets.
-    city_mean = (
-        df[[COL_CITY, COL_AQI]]
-        .assign(**{COL_AQI: pd.to_numeric(df[COL_AQI], errors="coerce")})
-        .dropna(subset=[COL_CITY, COL_AQI])
-        .groupby(COL_CITY, as_index=False)[COL_AQI]
-        .mean()
-    )
-    if city_mean.empty:
-        return pd.Series(True, index=df.index)
-
-    def _bucket_for_aqi(value: float) -> str:
-        for bucket, (lo, hi) in AQI_RANGES.items():
-            if lo <= value <= hi:
-                return bucket
-        return "Severe" if value > 400 else "Good"
-
-    city_mean["city_aqi_bucket"] = city_mean[COL_AQI].apply(_bucket_for_aqi)
-    eligible_cities = set(
-        city_mean.loc[city_mean["city_aqi_bucket"].isin(filters.aqi_buckets), COL_CITY].astype(str)
-    )
-    return df[COL_CITY].astype(str).isin(eligible_cities)
-
-
 def apply_filters(df: pd.DataFrame, filters: FilterState) -> pd.DataFrame:
     """Apply the shared filter model to a city-day-like frame."""
     if df.empty:
         return df
-    mask = _mask_date(df, filters) & _mask_city(df, filters) & _mask_bucket(df, filters)
+    mask = _mask_date(df, filters) & _mask_city(df, filters)
     return df.loc[mask].copy()
 
 

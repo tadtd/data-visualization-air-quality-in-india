@@ -42,6 +42,5 @@ def render_filter_summary(filters: "FilterState") -> None:
             {
                 "khoảng_thời_gian": [str(filters.date_start), str(filters.date_end)],
                 "thành_phố": filters.cities,
-                "mức_aqi": filters.aqi_buckets,
             }
         )

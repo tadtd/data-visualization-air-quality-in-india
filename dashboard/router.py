@@ -37,9 +37,7 @@ def run() -> None:
     else:
         raw_df = raw
 
-    filters = render_filter_state(
-        raw_df, key_prefix="shared_", show_buckets=True
-    )
+    filters = render_filter_state(raw_df, key_prefix="shared_")
 
     # Store filters in session state for pages to read
     st.session_state["shared_filters"] = filters
